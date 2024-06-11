@@ -201,6 +201,30 @@ namespace BankingSystem.Controllers
         }
 
         [Authorize]
+        [HttpDelete("{accId}/savings")]
+        public async Task<IActionResult> DeleteSavingsAccount(int accId)
+        {
+            var currUser = _contextAccessor.HttpContext.User;
+            var currId = currUser.GetUserId();
+
+            var user = await _unitOfWork.Users.GetByIdAsync(currId);
+            if (user == null) return NotFound();
+
+            var accQuery = _unitOfWork.Accounts.AsQueryable();
+            var accToDelete = await accQuery
+                    .OfType<SavingsAccount>()
+                    .Where(a => a.Id == accId && a.UserId == currId && a.Balance == 0)
+                    .FirstOrDefaultAsync();
+
+            if (accToDelete == null) return NotFound("Account does not exist.");
+
+            _unitOfWork.Accounts.Delete(accToDelete);
+            await _unitOfWork.SaveAsync();
+
+            return Ok("Account successfully deleted.");
+        }
+
+        [Authorize]
         [HttpGet("{loanId}/loan/payments")]
         public async Task<IActionResult> GetAllPaymentsForLoan(int loanId, [FromQuery] string sort = "asc")
         {
